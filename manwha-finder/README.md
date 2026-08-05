@@ -38,6 +38,45 @@ npm run build
 # Serves the built frontend from /frontend/dist
 ```
 
+## Deploy to Vercel
+
+The app is structured to deploy as a single Vercel project: the frontend
+builds to static files, and the Express backend runs as a Vercel serverless
+function (`api/[...path].js`) — no separate server to host.
+
+1. **Push this repo to GitHub** (if not already) and import it in the
+   [Vercel dashboard](https://vercel.com/new), or deploy from the CLI:
+   ```bash
+   npm i -g vercel
+   cd manwha-finder
+   vercel --prod
+   ```
+   Build settings are already defined in `vercel.json` — Vercel picks them up
+   automatically (install: `npm install`, build:
+   `npm run build --workspace=frontend`, output: `frontend/dist`).
+
+2. **Create a free Turso database** (SQLite-compatible, persists across
+   requests — a local file won't work on serverless):
+   ```bash
+   curl -sSfL https://get.tur.so/install.sh | bash
+   turso auth login
+   turso db create manwha-finder
+   turso db show manwha-finder --url
+   turso db tokens create manwha-finder
+   ```
+
+3. **Set environment variables** in the Vercel project settings
+   (Settings → Environment Variables):
+   - `ANTHROPIC_API_KEY`
+   - `TURSO_DATABASE_URL` (from step 2)
+   - `TURSO_AUTH_TOKEN` (from step 2)
+
+   Without the Turso variables, the app still runs but favorites/library/
+   history won't persist between requests (each serverless invocation gets
+   an ephemeral filesystem).
+
+4. Redeploy after setting env vars so the function picks them up.
+
 ## Android PWA Install
 
 1. Open `http://<your-local-ip>:5173` in **Chrome on Android**
