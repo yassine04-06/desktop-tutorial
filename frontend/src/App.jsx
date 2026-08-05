@@ -6,6 +6,7 @@ import FavoritesList from './components/FavoritesList.jsx';
 import LibraryPanel from './components/LibraryPanel.jsx';
 import LanguageToggle from './components/LanguageToggle.jsx';
 import ManwhaDetail from './components/ManwhaDetail.jsx';
+import GenreMenu from './components/GenreMenu.jsx';
 
 const POPULAR_SEARCHES = [
   'Solo Leveling',
@@ -98,6 +99,28 @@ export default function App() {
     setQuickStart({ title, nonce: Date.now() });
   }
 
+  function handleGoHome() {
+    setResults([]);
+    setSourceManwha(null);
+    setSelectedManga(null);
+  }
+
+  async function handleSelectGenre(genre) {
+    setLoading(true);
+    setSelectedManga(null);
+    try {
+      const res = await fetch(`/api/search-by-genre?tag=${genre.id}`);
+      const data = await res.json();
+      setResults(data);
+      setSourceManwha({ title: genre.name, isGenre: true });
+    } catch (err) {
+      console.error('Genre search error:', err);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // ── Favorites ──────────────────────────────────────────────────────────────
   async function handleToggleFavorite(manga) {
     const isFav = favoriteIds.has(manga.id);
@@ -176,7 +199,12 @@ export default function App() {
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-bg/90 backdrop-blur border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <h1 className="text-xl font-bold text-accent whitespace-nowrap">ManwhaFinder</h1>
+          <button
+            onClick={handleGoHome}
+            className="text-xl font-bold text-accent whitespace-nowrap hover:opacity-80 transition-opacity"
+          >
+            ManwhaFinder
+          </button>
 
           <div className="flex-1 max-w-2xl">
             <SearchBar
@@ -188,6 +216,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
+            <GenreMenu onSelectGenre={handleSelectGenre} />
             <LanguageToggle preferredLang={preferredLang} setPreferredLang={setPreferredLang} />
 
             {/* Library button */}
@@ -230,7 +259,7 @@ export default function App() {
         {sourceManwha && (
           <div className="mb-4 flex items-center gap-2 text-sm text-gray-400 flex-wrap">
             <span>
-              Results similar to{' '}
+              {sourceManwha.isGenre ? 'Genere: ' : 'Risultati simili a '}
               <span className="text-accent font-semibold">{sourceManwha.title}</span>
             </span>
             {libraryIds.size > 0 && (
