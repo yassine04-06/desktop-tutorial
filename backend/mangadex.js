@@ -17,18 +17,39 @@ async function getMangaById(id) {
   return normalizeManga(json.data);
 }
 
-async function enrichWithChapterCounts(results) {
-  return Promise.all(
-    results.map(async (manga) => {
-      const chapterCount = await getChapterCount(manga.id);
-      return { ...manga, chapterCount };
-    })
-  );
+// Runs `fn` over `items` with at most `limit` in flight at once. Firing all
+// chapter-count lookups at the same time got some of them silently rate-
+// limited by MangaDex (a failed request just returns 0 — indistinguishable
+// from "really has no chapters"), which is why counts looked wrong once we
+// started enriching more than a handful of results per search.
+async function mapWithConcurrency(items, limit, fn) {
+  const results = new Array(items.length);
+  let index = 0;
+  async function worker() {
+    while (index < items.length) {
+      const current = index++;
+      results[current] = await fn(items[current], current);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
 
-async function getChapterCount(mangaId) {
+async function enrichWithChapterCounts(results) {
+  return mapWithConcurrency(results, 6, async (manga) => {
+    const chapterCount = await getChapterCount(manga.id);
+    return { ...manga, chapterCount };
+  });
+}
+
+async function getChapterCount(mangaId, retried = false) {
   try {
     const res = await fetch(`${BASE}/manga/${mangaId}/aggregate?translatedLanguage[]=en&translatedLanguage[]=it`);
+    if (res.status === 429 && !retried) {
+      // Back off briefly and try once more instead of silently reporting 0.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return getChapterCount(mangaId, true);
+    }
     if (!res.ok) return 0;
     const json = await res.json();
     let total = 0;
@@ -55,7 +76,7 @@ async function getGenres() {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function searchByGenre(tagId, limit = 30) {
+async function searchByGenre(tagId, limit = 40) {
   const qs = `includedTags[]=${tagId}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&originalLanguage[]=ko&includes[]=cover_art&order[followedCount]=desc`;
   const res = await fetch(`${BASE}/manga?${qs}`);
   if (!res.ok) throw new Error(`MangaDex genre search failed: ${res.status}`);
@@ -70,20 +91,20 @@ async function searchSimilar(queries, excludeIds) {
 
   for (const query of queries) {
     try {
-      const items = await searchManga(query, 5);
+      const items = await searchManga(query, 8);
       for (const item of items) {
         if (!seen.has(item.id)) {
           seen.add(item.id);
           results.push(item);
         }
       }
-      if (results.length >= 30) break;
+      if (results.length >= 40) break;
     } catch (err) {
       console.error(`Query "${query}" failed:`, err.message);
     }
   }
 
-  return enrichWithChapterCounts(results.slice(0, 30));
+  return enrichWithChapterCounts(results.slice(0, 40));
 }
 
 function normalizeManga(data) {
@@ -106,7 +127,9 @@ function normalizeManga(data) {
     ? `/api/cover?mangaId=${data.id}&filename=${encodeURIComponent(coverFile)}`
     : null;
 
-  const updatedAt = data.attributes.updatedAt || data.attributes.lastChapter || null;
+  // NOTE: data.attributes.lastChapter is a chapter NUMBER (e.g. "45"), not a
+  // date — using it as a fallback here previously produced Invalid Date.
+  const updatedAt = data.attributes.updatedAt || null;
 
   const languages = data.attributes.availableTranslatedLanguages || [];
 
