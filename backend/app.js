@@ -92,11 +92,18 @@ app.get('/api/search-by-genre', async (req, res) => {
 
 // ── Cover proxy (bypasses MangaDex's anti-hotlink placeholder) ────────────────
 
-app.get('/api/cover/:mangaId/:filename', async (req, res) => {
+// Query params, not path segments — Vercel routes a path ending in a known
+// static-file extension (this one ends in .jpg) to its static-asset lookup
+// before it ever considers serverless functions, so /api/cover/:id/:file.jpg
+// 404'd at the platform level without ever reaching Express. A query string
+// is never treated as part of that extension check.
+app.get('/api/cover', async (req, res) => {
+  const { mangaId, filename } = req.query;
+  if (!mangaId || !filename) return res.status(400).json({ error: 'mangaId and filename required' });
   try {
-    const upstream = await fetchCoverImage(req.params.mangaId, req.params.filename);
+    const upstream = await fetchCoverImage(mangaId, filename);
     if (!upstream.ok) {
-      console.error(`Cover proxy upstream ${upstream.status} for ${req.params.mangaId}/${req.params.filename}`);
+      console.error(`Cover proxy upstream ${upstream.status} for ${mangaId}/${filename}`);
       return res.status(upstream.status).end();
     }
     res.setHeader('Content-Type', upstream.headers.get('content-type') || 'image/jpeg');
