@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function ManwhaCard({ manga, isFavorite, onToggleFavorite }) {
+export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLibrary, onToggleLibrary }) {
   const [imgError, setImgError] = useState(false);
 
   const statusColor =
@@ -37,6 +37,7 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite }) {
           </div>
         )}
 
+        {/* Favorites heart */}
         <button
           onClick={() => onToggleFavorite(manga)}
           className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 p-1.5 rounded-full transition-colors"
@@ -49,6 +50,23 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite }) {
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </button>
+
+        {/* Library bookmark */}
+        <button
+          onClick={() => onToggleLibrary(manga)}
+          className="absolute top-2 left-2 bg-black/60 hover:bg-black/80 p-1.5 rounded-full transition-colors"
+          aria-label={isInLibrary ? 'Remove from library' : 'Add to library (already read)'}
+          title={isInLibrary ? 'In your library' : 'Mark as read'}
+        >
+          <svg
+            className={`w-5 h-5 transition-colors ${isInLibrary ? 'text-blue-400 fill-blue-400' : 'text-white'}`}
+            fill={isInLibrary ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>
 
