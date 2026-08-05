@@ -3,7 +3,7 @@ const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...ar
 const BASE = 'https://api.mangadex.org';
 
 async function searchManga(title, limit = 5) {
-  const qs = `title=${encodeURIComponent(title)}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&originalLanguage[]=ko&includes[]=cover_art`;
+  const qs = `title=${encodeURIComponent(title)}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&includes[]=cover_art`;
   const res = await fetch(`${BASE}/manga?${qs}`);
   if (!res.ok) throw new Error(`MangaDex search failed: ${res.status}`);
   const json = await res.json();
@@ -77,7 +77,7 @@ async function getGenres() {
 }
 
 async function searchByGenre(tagId, limit = 40) {
-  const qs = `includedTags[]=${tagId}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&originalLanguage[]=ko&includes[]=cover_art&order[followedCount]=desc`;
+  const qs = `includedTags[]=${tagId}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&includes[]=cover_art&order[followedCount]=desc`;
   const res = await fetch(`${BASE}/manga?${qs}`);
   if (!res.ok) throw new Error(`MangaDex genre search failed: ${res.status}`);
   const json = await res.json();
