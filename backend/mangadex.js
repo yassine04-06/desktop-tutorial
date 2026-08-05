@@ -3,14 +3,6 @@ const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...ar
 const BASE = 'https://api.mangadex.org';
 
 async function searchManga(title, limit = 5) {
-  const params = new URLSearchParams({
-    title,
-    limit: String(limit),
-    'contentRating[]': ['safe', 'suggestive'],
-    'originalLanguage[]': 'ko',
-    'includes[]': 'cover_art',
-  });
-  // URLSearchParams doesn't handle array params well, build manually
   const qs = `title=${encodeURIComponent(title)}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&originalLanguage[]=ko&includes[]=cover_art`;
   const res = await fetch(`${BASE}/manga?${qs}`);
   if (!res.ok) throw new Error(`MangaDex search failed: ${res.status}`);
@@ -25,10 +17,6 @@ async function getMangaById(id) {
   return normalizeManga(json.data);
 }
 
-// Combined chapter count across English + Italian scanlations — MangaDex
-// dedupes by chapter number when multiple translatedLanguage values are
-// passed, so this reflects the highest number of chapters actually
-// readable in either language, not just English.
 async function getChapterCount(mangaId) {
   try {
     const res = await fetch(`${BASE}/manga/${mangaId}/aggregate?translatedLanguage[]=en&translatedLanguage[]=it`);
@@ -46,7 +34,6 @@ async function getChapterCount(mangaId) {
   }
 }
 
-// excludeIds can be a string (single id) or a Set of ids
 async function searchSimilar(queries, excludeIds) {
   const seen = typeof excludeIds === 'string' ? new Set([excludeIds]) : new Set(excludeIds);
   const results = [];
@@ -66,7 +53,6 @@ async function searchSimilar(queries, excludeIds) {
     }
   }
 
-  // Enrich with chapter counts in parallel (batched)
   const enriched = await Promise.all(
     results.slice(0, 30).map(async (manga) => {
       const chapterCount = await getChapterCount(manga.id);
@@ -92,7 +78,6 @@ function normalizeManga(data) {
 
   const updatedAt = data.attributes.updatedAt || data.attributes.lastChapter || null;
 
-  // Languages this manwha has at least one scanlated chapter in (e.g. ['en', 'it', 'es'])
   const languages = data.attributes.availableTranslatedLanguages || [];
 
   const descAttr = data.attributes.description || {};

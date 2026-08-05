@@ -1,5 +1,5 @@
-manwha-finder/backend/manwha.db*
-manwha-finder/.env
-manwha-finder/frontend/dist
-manwha-finder/node_modules
-manwha-finder/frontend/node_modules
+backend/manwha.db*
+.env
+frontend/dist
+node_modules
+frontend/node_modules

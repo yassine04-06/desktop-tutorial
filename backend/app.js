@@ -15,8 +15,6 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-// ── Search ────────────────────────────────────────────────────────────────────
-
 app.get('/api/search', async (req, res) => {
   const { title } = req.query;
   if (!title) return res.status(400).json({ error: 'title param required' });
@@ -28,8 +26,6 @@ app.get('/api/search', async (req, res) => {
     res.status(500).json({ error: 'Search failed' });
   }
 });
-
-// ── Similar (AI-powered, excludes library + recommendation history) ───────────
 
 app.get('/api/similar', async (req, res) => {
   const { id } = req.query;
@@ -52,14 +48,12 @@ app.get('/api/similar', async (req, res) => {
       queries = source.tags.slice(0, 20);
     }
 
-    // Build the exclusion set: source + library + previously recommended
     const libraryIds = new Set(await getLibraryIds());
     const seenIds = new Set(await getRecommendedIds());
     const excludeIds = new Set([id, ...libraryIds, ...seenIds]);
 
     const results = await searchSimilar(queries, excludeIds);
 
-    // Persist what we're about to show so it won't repeat next time
     await saveRecommended(results.map((r) => r.id));
 
     res.json(results);
@@ -68,8 +62,6 @@ app.get('/api/similar', async (req, res) => {
     res.status(500).json({ error: 'Similar search failed' });
   }
 });
-
-// ── Chapter count ─────────────────────────────────────────────────────────────
 
 app.get('/api/manga/:id/chapters', async (req, res) => {
   try {
@@ -80,8 +72,6 @@ app.get('/api/manga/:id/chapters', async (req, res) => {
     res.status(500).json({ error: 'Chapter fetch failed' });
   }
 });
-
-// ── Favorites ─────────────────────────────────────────────────────────────────
 
 app.post('/api/favorites', async (req, res) => {
   const { id, title, cover_url, chapter_count, status } = req.body;
@@ -105,8 +95,6 @@ app.delete('/api/favorites/:id', async (req, res) => {
   catch (err) { console.error('Delete favorite error:', err.message); res.status(500).json({ error: 'Delete failed' }); }
 });
 
-// ── Search history ────────────────────────────────────────────────────────────
-
 app.get('/api/history', async (req, res) => {
   try { res.json(await getSearchHistory()); }
   catch (err) { console.error('History error:', err.message); res.status(500).json({ error: 'History fetch failed' }); }
@@ -118,8 +106,6 @@ app.post('/api/history', async (req, res) => {
   try { await saveSearchHistory(query); res.json({ success: true }); }
   catch (err) { console.error('Save history error:', err.message); res.status(500).json({ error: 'Save history failed' }); }
 });
-
-// ── Library ───────────────────────────────────────────────────────────────────
 
 app.get('/api/library', async (req, res) => {
   try { res.json(await getLibrary()); }
@@ -138,7 +124,6 @@ app.delete('/api/library/:id', async (req, res) => {
   catch (err) { console.error('Remove library error:', err.message); res.status(500).json({ error: 'Delete failed' }); }
 });
 
-// Export library as JSON
 app.get('/api/library/export', async (req, res) => {
   try {
     const data = await getLibrary();
@@ -151,7 +136,6 @@ app.get('/api/library/export', async (req, res) => {
   }
 });
 
-// Import library from JSON array
 app.post('/api/library/import', async (req, res) => {
   const items = req.body;
   if (!Array.isArray(items)) return res.status(400).json({ error: 'Expected a JSON array' });
@@ -171,7 +155,6 @@ app.post('/api/library/import', async (req, res) => {
   }
 });
 
-// Reset recommendation history so the AI can suggest previously shown manwha again
 app.delete('/api/recommended-history', async (req, res) => {
   try {
     await clearRecommendedHistory();

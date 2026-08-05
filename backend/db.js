@@ -1,12 +1,6 @@
 const { createClient } = require('@libsql/client');
 const path = require('path');
 
-// TURSO_DATABASE_URL/TURSO_AUTH_TOKEN point at a hosted Turso (libSQL) database
-// in production. Without them, falls back to a local SQLite file — same
-// engine, zero cloud setup required to develop. On Vercel the deployed
-// function bundle is read-only outside /tmp, so the fallback path there is
-// /tmp (ephemeral, but at least writable) instead of __dirname; set the Turso
-// env vars in the Vercel project for data that actually persists.
 const localDbPath = process.env.VERCEL
   ? '/tmp/manwha.db'
   : path.join(__dirname, 'manwha.db');
@@ -46,10 +40,6 @@ const SCHEMA = [
   )`,
 ];
 
-// Netlify Functions are stateless per invocation, so schema creation can't
-// happen once at process start the way it did with a persistent server —
-// this promise runs once per cold start and every exported function awaits
-// it first, memoized so warm invocations skip straight through.
 const ready = (async () => {
   for (const statement of SCHEMA) {
     await db.execute(statement);
@@ -58,8 +48,6 @@ const ready = (async () => {
 
 async function saveFavorite({ id, title, cover_url, chapter_count, status }) {
   await ready;
-  // libSQL rejects `undefined` bind params (unlike better-sqlite3, which
-  // coerced them to NULL) — normalize optional fields explicitly.
   await db.execute({
     sql: `INSERT OR REPLACE INTO favorites (id, title, cover_url, chapter_count, status) VALUES (?, ?, ?, ?, ?)`,
     args: [id, title, cover_url ?? null, chapter_count ?? null, status ?? null],
@@ -88,7 +76,6 @@ async function getSearchHistory() {
   return rs.rows;
 }
 
-// Library (already-read manwha — excluded from recommendations)
 async function addToLibrary({ id, title, cover_url, chapter_count, status }) {
   await ready;
   await db.execute({
@@ -124,7 +111,6 @@ async function importLibrary(items) {
   await db.batch(statements, 'write');
 }
 
-// Recommendation history — track what was ever shown so AI can avoid it
 async function saveRecommended(ids) {
   await ready;
   if (ids.length === 0) return;
