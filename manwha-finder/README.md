@@ -11,7 +11,7 @@ AI-powered manwha recommendation app — find Korean manga similar to what you l
 ## Setup
 
 ```bash
-# 1. Install all dependencies (root + frontend workspace)
+# 1. Install all dependencies
 npm install
 
 # 2. Copy env template and fill in your API key
@@ -52,8 +52,11 @@ function (`api/[...path].js`) — no separate server to host.
    vercel --prod
    ```
    Build settings are already defined in `vercel.json` — Vercel picks them up
-   automatically (install: `npm install`, build:
-   `npm run build --workspace=frontend`, output: `frontend/dist`).
+   automatically (install: `npm install`, build: `npm run build`, output:
+   `frontend/dist`). Set **Root Directory to `manwha-finder`** when importing
+   (this repo has other content at its root) and, if deploying from a
+   non-default branch, set it as the Production Branch under
+   Settings → Git after the project is created.
 
 2. **Create a free Turso database** (SQLite-compatible, persists across
    requests — a local file won't work on serverless):

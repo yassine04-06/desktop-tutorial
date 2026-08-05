@@ -58,9 +58,11 @@ const ready = (async () => {
 
 async function saveFavorite({ id, title, cover_url, chapter_count, status }) {
   await ready;
+  // libSQL rejects `undefined` bind params (unlike better-sqlite3, which
+  // coerced them to NULL) — normalize optional fields explicitly.
   await db.execute({
     sql: `INSERT OR REPLACE INTO favorites (id, title, cover_url, chapter_count, status) VALUES (?, ?, ?, ?, ?)`,
-    args: [id, title, cover_url, chapter_count, status],
+    args: [id, title, cover_url ?? null, chapter_count ?? null, status ?? null],
   });
 }
 
@@ -91,7 +93,7 @@ async function addToLibrary({ id, title, cover_url, chapter_count, status }) {
   await ready;
   await db.execute({
     sql: `INSERT OR REPLACE INTO library (id, title, cover_url, chapter_count, status) VALUES (?, ?, ?, ?, ?)`,
-    args: [id, title, cover_url, chapter_count, status],
+    args: [id, title, cover_url ?? null, chapter_count ?? null, status ?? null],
   });
 }
 
@@ -117,7 +119,7 @@ async function importLibrary(items) {
   if (items.length === 0) return;
   const statements = items.map((item) => ({
     sql: `INSERT OR IGNORE INTO library (id, title, cover_url, chapter_count, status) VALUES (?, ?, ?, ?, ?)`,
-    args: [item.id, item.title, item.cover_url, item.chapter_count, item.status],
+    args: [item.id, item.title, item.cover_url ?? null, item.chapter_count ?? null, item.status ?? null],
   }));
   await db.batch(statements, 'write');
 }
