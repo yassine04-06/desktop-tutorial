@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export default function ManwhaDetail({ manga, isFavorite, onToggleFavorite, isInLibrary, onToggleLibrary, preferredLang, onClose }) {
+export default function ManwhaDetail({ manga, isFavorite, onToggleFavorite, isInLibrary, onToggleLibrary, preferredLang, onClose, onFindSimilar }) {
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -130,6 +130,18 @@ export default function ManwhaDetail({ manga, isFavorite, onToggleFavorite, isIn
                 <p className="text-xs text-gray-500 italic mt-2">Descrizione in italiano non disponibile — mostrata la versione inglese.</p>
               )}
             </div>
+
+            {onFindSimilar && (
+              <button
+                onClick={() => onFindSimilar(manga)}
+                className="w-full flex items-center justify-center gap-2 bg-accent/10 border border-accent text-accent hover:bg-accent hover:text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Trova manwha simili (AI)
+              </button>
+            )}
 
             <div className="mt-auto pt-2 flex flex-col sm:flex-row gap-2">
               <button
