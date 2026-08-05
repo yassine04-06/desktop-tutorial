@@ -1,11 +1,12 @@
 import { useState } from 'react';
 
-export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLibrary, onToggleLibrary, preferredLang }) {
+export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLibrary, onToggleLibrary, preferredLang, onOpenDetail }) {
   const [imgError, setImgError] = useState(false);
 
   const languages = manga.languages || [];
   const hasIt = languages.includes('it');
   const hasEn = languages.includes('en');
+  const topTags = (manga.tags || []).slice(0, 2);
 
   const statusColor =
     manga.status === 'completed'
@@ -18,12 +19,29 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLi
     ? new Date(manga.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
     : null;
 
-  function handleTachiyomi() {
+  function handleTachiyomi(e) {
+    e.stopPropagation();
     window.location.href = `tachiyomi://manga/mangadex/${manga.id}`;
   }
 
+  function handleFavoriteClick(e) {
+    e.stopPropagation();
+    onToggleFavorite(manga);
+  }
+
+  function handleLibraryClick(e) {
+    e.stopPropagation();
+    onToggleLibrary(manga);
+  }
+
   return (
-    <div className="bg-card rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-accent/20 transition-shadow duration-300">
+    <div
+      onClick={() => onOpenDetail(manga)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpenDetail(manga); }}
+      className="group bg-card rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-xl hover:shadow-accent/20 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+    >
       <div className="relative">
         {manga.coverUrl && !imgError ? (
           <img
@@ -31,7 +49,7 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLi
             alt={manga.title}
             loading="lazy"
             onError={() => setImgError(true)}
-            className="w-full h-56 object-cover"
+            className="w-full h-56 object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-56 bg-gray-800 flex items-center justify-center">
@@ -41,9 +59,21 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLi
           </div>
         )}
 
+        {/* Bottom gradient for legibility + tag pills */}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/85 to-transparent pointer-events-none" />
+        {topTags.length > 0 && (
+          <div className="absolute bottom-2 right-2 flex flex-wrap gap-1 justify-end max-w-[70%]">
+            {topTags.map((tag) => (
+              <span key={tag} className="text-[10px] font-medium bg-black/50 text-gray-200 px-1.5 py-0.5 rounded-full truncate">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Favorites heart */}
         <button
-          onClick={() => onToggleFavorite(manga)}
+          onClick={handleFavoriteClick}
           className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 p-1.5 rounded-full transition-colors"
           aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
         >
@@ -59,7 +89,7 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLi
 
         {/* Library bookmark */}
         <button
-          onClick={() => onToggleLibrary(manga)}
+          onClick={handleLibraryClick}
           className="absolute top-2 left-2 bg-black/60 hover:bg-black/80 p-1.5 rounded-full transition-colors"
           aria-label={isInLibrary ? 'Remove from library' : 'Add to library (already read)'}
           title={isInLibrary ? 'In your library' : 'Mark as read'}
@@ -85,7 +115,9 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLi
       </div>
 
       <div className="p-3 flex flex-col gap-2 flex-1">
-        <h3 className="font-bold text-gray-100 text-sm leading-tight line-clamp-2">{manga.title}</h3>
+        <h3 className="font-bold text-gray-100 text-sm leading-tight line-clamp-2 group-hover:text-accent transition-colors">
+          {manga.title}
+        </h3>
 
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor}`}>

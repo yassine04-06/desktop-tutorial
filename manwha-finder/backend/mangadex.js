@@ -95,10 +95,13 @@ function normalizeManga(data) {
   // Languages this manwha has at least one scanlated chapter in (e.g. ['en', 'it', 'es'])
   const languages = data.attributes.availableTranslatedLanguages || [];
 
+  const descAttr = data.attributes.description || {};
+
   return {
     id: data.id,
     title,
-    description: getDescription(data.attributes.description),
+    description: descAttr.en || descAttr.ko || Object.values(descAttr)[0] || '',
+    descriptions: { en: descAttr.en || '', it: descAttr.it || '' },
     tags,
     status: data.attributes.status,
     year: data.attributes.year,
@@ -107,11 +110,6 @@ function normalizeManga(data) {
     languages,
     chapterCount: 0,
   };
-}
-
-function getDescription(desc) {
-  if (!desc) return '';
-  return desc.en || desc.ko || Object.values(desc)[0] || '';
 }
 
 module.exports = { searchManga, getMangaById, getChapterCount, searchSimilar };

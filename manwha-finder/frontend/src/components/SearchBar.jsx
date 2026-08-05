@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function SearchBar({ onSimilarResults, onLoading }) {
+export default function SearchBar({ onSimilarResults, onLoading, quickStartTitle, quickStartNonce }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -17,14 +17,18 @@ export default function SearchBar({ onSimilarResults, onLoading }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  async function doSearch(title) {
+    const res = await fetch(`/api/search?title=${encodeURIComponent(title)}`);
+    return res.json();
+  }
+
   async function handleSearch(e) {
     e.preventDefault();
     if (!query.trim()) return;
     setSearching(true);
     setSuggestions([]);
     try {
-      const res = await fetch(`/api/search?title=${encodeURIComponent(query)}`);
-      const data = await res.json();
+      const data = await doSearch(query);
       setSuggestions(data);
       setShowDropdown(true);
     } catch (err) {
@@ -54,6 +58,33 @@ export default function SearchBar({ onSimilarResults, onLoading }) {
       onLoading(false);
     }
   }
+
+  // Triggered by clicking a "popular search" chip on the landing state —
+  // searches and jumps straight to the top match's similar results.
+  useEffect(() => {
+    if (!quickStartTitle || !quickStartNonce) return;
+    let cancelled = false;
+    (async () => {
+      setQuery(quickStartTitle);
+      setSearching(true);
+      try {
+        const data = await doSearch(quickStartTitle);
+        if (cancelled) return;
+        if (data.length > 0) {
+          await handleSelect(data[0]);
+        } else {
+          setSuggestions([]);
+          setShowDropdown(true);
+        }
+      } catch (err) {
+        console.error('Quick-start search error:', err);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickStartNonce]);
 
   return (
     <div className="relative w-full max-w-2xl mx-auto" ref={dropdownRef}>

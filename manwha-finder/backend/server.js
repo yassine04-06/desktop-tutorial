@@ -40,16 +40,15 @@ app.get('/api/similar', async (req, res) => {
     const source = await getMangaById(id);
     const tagList = source.tags.join(', ');
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 512,
-      system:
-        'You are a manwha recommendation expert. Given a list of tags and genres, return a JSON array of 20 search queries (single keywords or short phrases) that would find similar manwha on MangaDex. Return ONLY a raw JSON array of strings, no markdown, no explanation.',
-      messages: [{ role: 'user', content: `Tags and genres: ${tagList}` }],
-    });
-
     let queries;
     try {
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 512,
+        system:
+          'You are a manwha recommendation expert. Given a list of tags and genres, return a JSON array of 20 search queries (single keywords or short phrases) that would find similar manwha on MangaDex. Return ONLY a raw JSON array of strings, no markdown, no explanation.',
+        messages: [{ role: 'user', content: `Tags and genres: ${tagList}` }],
+      });
       queries = JSON.parse(message.content[0].text);
     } catch {
       queries = source.tags.slice(0, 20);
