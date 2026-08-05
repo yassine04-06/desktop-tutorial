@@ -4,6 +4,7 @@ import FilterBar from './components/FilterBar.jsx';
 import ManwhaCard from './components/ManwhaCard.jsx';
 import FavoritesList from './components/FavoritesList.jsx';
 import LibraryPanel from './components/LibraryPanel.jsx';
+import LanguageToggle from './components/LanguageToggle.jsx';
 
 function SkeletonCard() {
   return (
@@ -41,6 +42,11 @@ export default function App() {
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [libraryIds, setLibraryIds] = useState(new Set());
   const [sourceManwha, setSourceManwha] = useState(null);
+  const [preferredLang, setPreferredLang] = useState(() => localStorage.getItem('manwhafinder_lang') || 'it');
+
+  useEffect(() => {
+    localStorage.setItem('manwhafinder_lang', preferredLang);
+  }, [preferredLang]);
 
   useEffect(() => {
     Promise.all([
@@ -144,6 +150,8 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
+            <LanguageToggle preferredLang={preferredLang} setPreferredLang={setPreferredLang} />
+
             {/* Library button */}
             <button
               onClick={() => setLibraryOpen(true)}
@@ -223,6 +231,7 @@ export default function App() {
                 onToggleFavorite={handleToggleFavorite}
                 isInLibrary={libraryIds.has(manga.id)}
                 onToggleLibrary={handleToggleLibrary}
+                preferredLang={preferredLang}
               />
             ))}
           </div>

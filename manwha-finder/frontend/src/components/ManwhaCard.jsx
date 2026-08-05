@@ -1,7 +1,11 @@
 import { useState } from 'react';
 
-export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLibrary, onToggleLibrary }) {
+export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLibrary, onToggleLibrary, preferredLang }) {
   const [imgError, setImgError] = useState(false);
+
+  const languages = manga.languages || [];
+  const hasIt = languages.includes('it');
+  const hasEn = languages.includes('en');
 
   const statusColor =
     manga.status === 'completed'
@@ -71,7 +75,10 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLi
         </button>
 
         {manga.chapterCount > 0 && (
-          <span className="absolute bottom-2 left-2 bg-accent text-white text-xs font-bold px-2 py-1 rounded-full">
+          <span
+            className="absolute bottom-2 left-2 bg-accent text-white text-xs font-bold px-2 py-1 rounded-full"
+            title="Capitoli combinati disponibili in italiano + inglese"
+          >
             {manga.chapterCount} ch
           </span>
         )}
@@ -89,12 +96,36 @@ export default function ManwhaCard({ manga, isFavorite, onToggleFavorite, isInLi
           )}
         </div>
 
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+              hasIt ? 'bg-green-800 text-green-200' : 'bg-gray-800 text-gray-600'
+            }`}
+            title={hasIt ? 'Disponibile in italiano' : 'Non disponibile in italiano'}
+          >
+            IT
+          </span>
+          <span
+            className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+              hasEn ? 'bg-green-800 text-green-200' : 'bg-gray-800 text-gray-600'
+            }`}
+            title={hasEn ? 'Available in English' : 'Not available in English'}
+          >
+            EN
+          </span>
+          {preferredLang && !languages.includes(preferredLang) && (hasIt || hasEn) && (
+            <span className="text-xs text-yellow-500" title={`Non disponibile in ${preferredLang.toUpperCase()}, ma leggibile nell'altra lingua`}>
+              ⚠
+            </span>
+          )}
+        </div>
+
         <button
           onClick={handleTachiyomi}
           className="mt-auto w-full bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
           Open in Tachiyomi
         </button>

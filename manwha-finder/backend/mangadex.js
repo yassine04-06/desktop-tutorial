@@ -25,9 +25,13 @@ async function getMangaById(id) {
   return normalizeManga(json.data);
 }
 
+// Combined chapter count across English + Italian scanlations — MangaDex
+// dedupes by chapter number when multiple translatedLanguage values are
+// passed, so this reflects the highest number of chapters actually
+// readable in either language, not just English.
 async function getChapterCount(mangaId) {
   try {
-    const res = await fetch(`${BASE}/manga/${mangaId}/aggregate?translatedLanguage[]=en`);
+    const res = await fetch(`${BASE}/manga/${mangaId}/aggregate?translatedLanguage[]=en&translatedLanguage[]=it`);
     if (!res.ok) return 0;
     const json = await res.json();
     let total = 0;
@@ -88,6 +92,9 @@ function normalizeManga(data) {
 
   const updatedAt = data.attributes.updatedAt || data.attributes.lastChapter || null;
 
+  // Languages this manwha has at least one scanlated chapter in (e.g. ['en', 'it', 'es'])
+  const languages = data.attributes.availableTranslatedLanguages || [];
+
   return {
     id: data.id,
     title,
@@ -97,6 +104,7 @@ function normalizeManga(data) {
     year: data.attributes.year,
     coverUrl,
     updatedAt,
+    languages,
     chapterCount: 0,
   };
 }
