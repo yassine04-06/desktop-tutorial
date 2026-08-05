@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function SearchBar({ onResults, onLoading, quickStartTitle, quickStartNonce }) {
+export default function SearchBar({ onResults, onLoading, quickStartTitle, quickStartNonce, origin }) {
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
 
@@ -13,7 +13,8 @@ export default function SearchBar({ onResults, onLoading, quickStartTitle, quick
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: title }),
       });
-      const res = await fetch(`/api/search?title=${encodeURIComponent(title)}`);
+      const originParam = origin ? `&origin=${origin}` : '';
+      const res = await fetch(`/api/search?title=${encodeURIComponent(title)}${originParam}`);
       const data = await res.json();
       onResults(data, title);
     } catch (err) {

@@ -7,6 +7,7 @@ import LibraryPanel from './components/LibraryPanel.jsx';
 import LanguageToggle from './components/LanguageToggle.jsx';
 import ManwhaDetail from './components/ManwhaDetail.jsx';
 import GenreMenu from './components/GenreMenu.jsx';
+import OriginFilter from './components/OriginFilter.jsx';
 
 const POPULAR_SEARCHES = [
   'Solo Leveling',
@@ -77,6 +78,7 @@ export default function App() {
   const [sourceManwha, setSourceManwha] = useState(null);
   const [selectedManga, setSelectedManga] = useState(null);
   const [quickStart, setQuickStart] = useState({ title: '', nonce: 0 });
+  const [origin, setOrigin] = useState('');
   const [preferredLang, setPreferredLang] = useState(() => localStorage.getItem('manwhafinder_lang') || 'it');
 
   useEffect(() => {
@@ -117,7 +119,8 @@ export default function App() {
     setLoading(true);
     setSelectedManga(null);
     try {
-      const res = await fetch(`/api/search-by-genre?tag=${genre.id}`);
+      const originParam = origin ? `&origin=${origin}` : '';
+      const res = await fetch(`/api/search-by-genre?tag=${genre.id}${originParam}`);
       const data = await res.json();
       setResults(data);
       setSourceManwha({ title: genre.name, kind: 'genre' });
@@ -233,10 +236,12 @@ export default function App() {
               onLoading={setLoading}
               quickStartTitle={quickStart.title}
               quickStartNonce={quickStart.nonce}
+              origin={origin}
             />
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
+            <OriginFilter origin={origin} setOrigin={setOrigin} />
             <GenreMenu onSelectGenre={handleSelectGenre} />
             <LanguageToggle preferredLang={preferredLang} setPreferredLang={setPreferredLang} />
 

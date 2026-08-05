@@ -2,12 +2,22 @@ const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...ar
 
 const BASE = 'https://api.mangadex.org';
 
-async function searchManga(title, limit = 5) {
-  const qs = `title=${encodeURIComponent(title)}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&includes[]=cover_art`;
+// origin is an optional MangaDex language code restricting the comic's
+// original language — 'ko' for manwha, 'zh'/'zh-hk' for manhua, 'ja' for
+// manga. Omit (or pass '') to search all origins.
+async function searchManga(title, limit = 5, origin = '') {
+  let qs = `title=${encodeURIComponent(title)}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&includes[]=cover_art`;
+  if (origin) qs += originQueryParam(origin);
   const res = await fetch(`${BASE}/manga?${qs}`);
   if (!res.ok) throw new Error(`MangaDex search failed: ${res.status}`);
   const json = await res.json();
   return json.data.map(normalizeManga);
+}
+
+// 'zh' covers both simplified/traditional manhua listings on MangaDex.
+function originQueryParam(origin) {
+  if (origin === 'zh') return `&originalLanguage[]=zh&originalLanguage[]=zh-hk`;
+  return `&originalLanguage[]=${origin}`;
 }
 
 async function getMangaById(id) {
@@ -76,8 +86,9 @@ async function getGenres() {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function searchByGenre(tagId, limit = 40) {
-  const qs = `includedTags[]=${tagId}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&includes[]=cover_art&order[followedCount]=desc`;
+async function searchByGenre(tagId, limit = 40, origin = '') {
+  let qs = `includedTags[]=${tagId}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&includes[]=cover_art&order[followedCount]=desc`;
+  if (origin) qs += originQueryParam(origin);
   const res = await fetch(`${BASE}/manga?${qs}`);
   if (!res.ok) throw new Error(`MangaDex genre search failed: ${res.status}`);
   const json = await res.json();
