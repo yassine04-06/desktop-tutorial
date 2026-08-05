@@ -34,6 +34,34 @@ async function getChapterCount(mangaId) {
   }
 }
 
+// Genres/themes list from MangaDex's tag taxonomy, for browsing by genre
+// instead of by title.
+async function getGenres() {
+  const res = await fetch(`${BASE}/manga/tag`);
+  if (!res.ok) throw new Error(`MangaDex tags failed: ${res.status}`);
+  const json = await res.json();
+  return json.data
+    .filter((t) => t.attributes.group === 'genre')
+    .map((t) => ({ id: t.id, name: t.attributes.name.en || Object.values(t.attributes.name)[0] }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function searchByGenre(tagId, limit = 30) {
+  const qs = `includedTags[]=${tagId}&limit=${limit}&contentRating[]=safe&contentRating[]=suggestive&originalLanguage[]=ko&includes[]=cover_art&order[followedCount]=desc`;
+  const res = await fetch(`${BASE}/manga?${qs}`);
+  if (!res.ok) throw new Error(`MangaDex genre search failed: ${res.status}`);
+  const json = await res.json();
+  const results = json.data.map(normalizeManga);
+  const enriched = await Promise.all(
+    results.map(async (manga) => {
+      const chapterCount = await getChapterCount(manga.id);
+      return { ...manga, chapterCount };
+    })
+  );
+  return enriched;
+}
+
+// excludeIds can be a string (single id) or a Set of ids
 async function searchSimilar(queries, excludeIds) {
   const seen = typeof excludeIds === 'string' ? new Set([excludeIds]) : new Set(excludeIds);
   const results = [];
@@ -72,9 +100,14 @@ function normalizeManga(data) {
     return n.en || Object.values(n)[0];
   });
 
+  // Routed through our own /api/cover proxy rather than linking directly to
+  // uploads.mangadex.org — MangaDex serves a "read this at mangadex.org"
+  // placeholder image instead of the real cover when it's hotlinked straight
+  // from a third-party browser tab, so the request needs to go through our
+  // server first.
   const coverRel = (data.relationships || []).find((r) => r.type === 'cover_art');
   const coverFile = coverRel?.attributes?.fileName;
-  const coverUrl = coverFile ? `https://uploads.mangadex.org/covers/${data.id}/${coverFile}.256.jpg` : null;
+  const coverUrl = coverFile ? `/api/cover/${data.id}/${coverFile}` : null;
 
   const updatedAt = data.attributes.updatedAt || data.attributes.lastChapter || null;
 
@@ -97,4 +130,16 @@ function normalizeManga(data) {
   };
 }
 
-module.exports = { searchManga, getMangaById, getChapterCount, searchSimilar };
+// Fetches a cover image server-side with a Referer MangaDex's CDN accepts,
+// so the real artwork comes back instead of their anti-hotlink placeholder.
+async function fetchCoverImage(mangaId, filename) {
+  const res = await fetch(`https://uploads.mangadex.org/covers/${mangaId}/${filename}.256.jpg`, {
+    headers: {
+      Referer: 'https://mangadex.org/',
+      'User-Agent': 'Mozilla/5.0 (compatible; ManwhaFinder/1.0; +https://mangadex.org)',
+    },
+  });
+  return res;
+}
+
+module.exports = { searchManga, getMangaById, getChapterCount, searchSimilar, getGenres, searchByGenre, fetchCoverImage };

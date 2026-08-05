@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
-const { searchManga, getMangaById, getChapterCount, searchSimilar } = require('./mangadex');
+const { searchManga, getMangaById, getChapterCount, searchSimilar, getGenres, searchByGenre, fetchCoverImage } = require('./mangadex');
 const {
   saveFavorite, getFavorites, deleteFavorite,
   saveSearchHistory, getSearchHistory,
@@ -62,6 +62,49 @@ app.get('/api/similar', async (req, res) => {
     res.status(500).json({ error: 'Similar search failed' });
   }
 });
+
+// ── Genres ────────────────────────────────────────────────────────────────────
+
+app.get('/api/genres', async (req, res) => {
+  try {
+    const genres = await getGenres();
+    res.json(genres);
+  } catch (err) {
+    console.error('Genres error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch genres' });
+  }
+});
+
+app.get('/api/search-by-genre', async (req, res) => {
+  const { tag } = req.query;
+  if (!tag) return res.status(400).json({ error: 'tag param required' });
+  try {
+    const libraryIds = new Set(await getLibraryIds());
+    const results = await searchByGenre(tag, 30);
+    res.json(results.filter((m) => !libraryIds.has(m.id)));
+  } catch (err) {
+    console.error('Search by genre error:', err.message);
+    res.status(500).json({ error: 'Genre search failed' });
+  }
+});
+
+// ── Cover proxy (bypasses MangaDex's anti-hotlink placeholder) ────────────────
+
+app.get('/api/cover/:mangaId/:filename', async (req, res) => {
+  try {
+    const upstream = await fetchCoverImage(req.params.mangaId, req.params.filename);
+    if (!upstream.ok) return res.status(upstream.status).end();
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    res.send(buffer);
+  } catch (err) {
+    console.error('Cover proxy error:', err.message);
+    res.status(502).end();
+  }
+});
+
+// ── Chapter count ─────────────────────────────────────────────────────────────
 
 app.get('/api/manga/:id/chapters', async (req, res) => {
   try {
