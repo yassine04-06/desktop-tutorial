@@ -102,7 +102,9 @@ function normalizeManga(data) {
   // server first.
   const coverRel = (data.relationships || []).find((r) => r.type === 'cover_art');
   const coverFile = coverRel?.attributes?.fileName;
-  const coverUrl = coverFile ? `/api/cover/${data.id}/${coverFile}` : null;
+  const coverUrl = coverFile
+    ? `/api/cover?mangaId=${data.id}&filename=${encodeURIComponent(coverFile)}`
+    : null;
 
   const updatedAt = data.attributes.updatedAt || data.attributes.lastChapter || null;
 
