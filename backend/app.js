@@ -20,7 +20,7 @@ app.get('/api/search', async (req, res) => {
   if (!title) return res.status(400).json({ error: 'title param required' });
   try {
     const libraryIds = new Set(await getLibraryIds());
-    const results = await searchManga(title, 24);
+    const results = await searchManga(title, 40);
     const enriched = await enrichWithChapterCounts(results.filter((m) => !libraryIds.has(m.id)));
     res.json(enriched);
   } catch (err) {
