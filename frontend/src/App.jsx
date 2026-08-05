@@ -17,6 +17,12 @@ const POPULAR_SEARCHES = [
   'Villains Are Destined to Die',
 ];
 
+const SOURCE_LABELS = {
+  search: 'Risultati per ',
+  genre: 'Genere: ',
+  similar: 'Risultati simili a ',
+};
+
 function SkeletonCard({ delay = 0 }) {
   return (
     <div className="bg-card rounded-2xl overflow-hidden card-in" style={{ animationDelay: `${delay}ms` }}>
@@ -38,7 +44,7 @@ function EmptyState({ onQuickStart }) {
       </svg>
       <div className="text-center">
         <p className="text-xl font-semibold text-gray-300">Cerca un manwha per iniziare</p>
-        <p className="text-sm text-center max-w-sm mt-1">Scrivi un titolo, scegli dal menu, e ricevi consigli AI simili — quelli già nella tua libreria vengono esclusi automaticamente.</p>
+        <p className="text-sm text-center max-w-sm mt-1">Scrivi un titolo o parola chiave e vedi subito tutti i risultati corrispondenti — quelli già nella tua libreria vengono esclusi automaticamente.</p>
       </div>
 
       <div className="flex flex-col items-center gap-2 mt-2">
@@ -60,13 +66,12 @@ function EmptyState({ onQuickStart }) {
 }
 
 export default function App() {
+  const [view, setView] = useState('search'); // 'search' | 'favorites' | 'library'
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState('chapters_desc');
   const [statusFilter, setStatusFilter] = useState('all');
   const [minChapters, setMinChapters] = useState(0);
-  const [favoritesOpen, setFavoritesOpen] = useState(false);
-  const [libraryOpen, setLibraryOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [libraryIds, setLibraryIds] = useState(new Set());
   const [sourceManwha, setSourceManwha] = useState(null);
@@ -90,31 +95,51 @@ export default function App() {
       .catch((err) => console.error('Init error:', err));
   }, []);
 
-  function handleSimilarResults(data, source) {
+  function handleSearchResults(data, query) {
     setResults(data);
-    setSourceManwha(source);
+    setSourceManwha({ title: query, kind: 'search' });
   }
 
   function handleQuickStart(title) {
+    setView('search');
     setQuickStart({ title, nonce: Date.now() });
   }
 
   function handleGoHome() {
+    setView('search');
     setResults([]);
     setSourceManwha(null);
     setSelectedManga(null);
   }
 
   async function handleSelectGenre(genre) {
+    setView('search');
     setLoading(true);
     setSelectedManga(null);
     try {
       const res = await fetch(`/api/search-by-genre?tag=${genre.id}`);
       const data = await res.json();
       setResults(data);
-      setSourceManwha({ title: genre.name, isGenre: true });
+      setSourceManwha({ title: genre.name, kind: 'genre' });
     } catch (err) {
       console.error('Genre search error:', err);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleFindSimilar(manga) {
+    setSelectedManga(null);
+    setView('search');
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/similar?id=${manga.id}`);
+      const data = await res.json();
+      setResults(data);
+      setSourceManwha({ title: manga.title, kind: 'similar' });
+    } catch (err) {
+      console.error('Find similar error:', err);
       setResults([]);
     } finally {
       setLoading(false);
@@ -139,10 +164,6 @@ export default function App() {
         setFavoriteIds((prev) => new Set([...prev, manga.id]));
       } catch (err) { console.error('Save favorite error:', err); }
     }
-  }
-
-  function handleRemoveFavorite(id) {
-    setFavoriteIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
   }
 
   // ── Library ────────────────────────────────────────────────────────────────
@@ -172,7 +193,7 @@ export default function App() {
       .catch((err) => console.error('Refresh library error:', err));
   }
 
-  // ── Filtering & sorting ────────────────────────────────────────────────────
+  // ── Filtering & sorting (search view only) ────────────────────────────────
   const filtered = useMemo(() => {
     let list = [...results];
 
@@ -208,7 +229,7 @@ export default function App() {
 
           <div className="flex-1 max-w-2xl">
             <SearchBar
-              onSimilarResults={handleSimilarResults}
+              onResults={handleSearchResults}
               onLoading={setLoading}
               quickStartTitle={quickStart.title}
               quickStartNonce={quickStart.nonce}
@@ -221,10 +242,10 @@ export default function App() {
 
             {/* Library button */}
             <button
-              onClick={() => setLibraryOpen(true)}
-              className="relative text-gray-300 hover:text-blue-400 transition-colors"
-              aria-label="Open library"
-              title="My Library (already read — excluded from AI)"
+              onClick={() => setView('library')}
+              className={`relative transition-colors ${view === 'library' ? 'text-blue-400' : 'text-gray-300 hover:text-blue-400'}`}
+              aria-label="Apri libreria"
+              title="La mia libreria (già letti — esclusi dall'AI)"
             >
               <svg className="w-6 h-6" fill={libraryIds.size > 0 ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -238,9 +259,9 @@ export default function App() {
 
             {/* Favorites button */}
             <button
-              onClick={() => setFavoritesOpen(true)}
-              className="relative text-gray-300 hover:text-accent transition-colors"
-              aria-label="Open favorites"
+              onClick={() => setView('favorites')}
+              className={`relative transition-colors ${view === 'favorites' ? 'text-accent' : 'text-gray-300 hover:text-accent'}`}
+              aria-label="Apri preferiti"
             >
               <svg className="w-6 h-6" fill={favoriteIds.size > 0 ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -256,76 +277,89 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {sourceManwha && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-400 flex-wrap">
-            <span>
-              {sourceManwha.isGenre ? 'Genere: ' : 'Risultati simili a '}
-              <span className="text-accent font-semibold">{sourceManwha.title}</span>
-            </span>
-            {libraryIds.size > 0 && (
-              <span className="text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded-full">
-                {libraryIds.size} library titles excluded
-              </span>
+        {view === 'favorites' && (
+          <FavoritesList
+            favoriteIds={favoriteIds}
+            onToggleFavorite={handleToggleFavorite}
+            libraryIds={libraryIds}
+            onToggleLibrary={handleToggleLibrary}
+            preferredLang={preferredLang}
+            onOpenDetail={setSelectedManga}
+          />
+        )}
+
+        {view === 'library' && (
+          <LibraryPanel
+            favoriteIds={favoriteIds}
+            onToggleFavorite={handleToggleFavorite}
+            libraryIds={libraryIds}
+            onToggleLibrary={handleToggleLibrary}
+            onLibraryChange={handleLibraryChange}
+            preferredLang={preferredLang}
+            onOpenDetail={setSelectedManga}
+          />
+        )}
+
+        {view === 'search' && (
+          <>
+            {sourceManwha && (
+              <div className="mb-4 flex items-center gap-2 text-sm text-gray-400 flex-wrap">
+                <span>
+                  {SOURCE_LABELS[sourceManwha.kind] || ''}
+                  <span className="text-accent font-semibold">{sourceManwha.title}</span>
+                </span>
+                {libraryIds.size > 0 && (
+                  <span className="text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded-full">
+                    {libraryIds.size} titoli della libreria esclusi
+                  </span>
+                )}
+              </div>
             )}
-          </div>
-        )}
 
-        {results.length > 0 && (
-          <div className="mb-6">
-            <FilterBar
-              sort={sort} setSort={setSort}
-              statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-              minChapters={minChapters} setMinChapters={setMinChapters}
-            />
-          </div>
-        )}
-
-        {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} delay={i * 30} />)}
-          </div>
-        )}
-
-        {!loading && results.length === 0 && <EmptyState onQuickStart={handleQuickStart} />}
-
-        {!loading && filtered.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filtered.map((manga, i) => (
-              <div key={manga.id} className="card-in" style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>
-                <ManwhaCard
-                  manga={manga}
-                  isFavorite={favoriteIds.has(manga.id)}
-                  onToggleFavorite={handleToggleFavorite}
-                  isInLibrary={libraryIds.has(manga.id)}
-                  onToggleLibrary={handleToggleLibrary}
-                  preferredLang={preferredLang}
-                  onOpenDetail={setSelectedManga}
+            {results.length > 0 && (
+              <div className="mb-6">
+                <FilterBar
+                  sort={sort} setSort={setSort}
+                  statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+                  minChapters={minChapters} setMinChapters={setMinChapters}
                 />
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {!loading && results.length > 0 && filtered.length === 0 && (
-          <div className="text-center py-16 text-gray-500">
-            No results match the current filters.
-          </div>
+            {loading && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} delay={i * 30} />)}
+              </div>
+            )}
+
+            {!loading && results.length === 0 && <EmptyState onQuickStart={handleQuickStart} />}
+
+            {!loading && filtered.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filtered.map((manga, i) => (
+                  <div key={manga.id} className="card-in" style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>
+                    <ManwhaCard
+                      manga={manga}
+                      isFavorite={favoriteIds.has(manga.id)}
+                      onToggleFavorite={handleToggleFavorite}
+                      isInLibrary={libraryIds.has(manga.id)}
+                      onToggleLibrary={handleToggleLibrary}
+                      preferredLang={preferredLang}
+                      onOpenDetail={setSelectedManga}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!loading && results.length > 0 && filtered.length === 0 && (
+              <div className="text-center py-16 text-gray-500">
+                Nessun risultato con i filtri attuali.
+              </div>
+            )}
+          </>
         )}
       </main>
-
-      <FavoritesList
-        isOpen={favoritesOpen}
-        onClose={() => setFavoritesOpen(false)}
-        favoriteIds={favoriteIds}
-        onRemove={handleRemoveFavorite}
-      />
-
-      <LibraryPanel
-        isOpen={libraryOpen}
-        onClose={() => setLibraryOpen(false)}
-        libraryIds={libraryIds}
-        onLibraryChange={handleLibraryChange}
-      />
 
       {selectedManga && (
         <ManwhaDetail
@@ -336,6 +370,7 @@ export default function App() {
           onToggleLibrary={handleToggleLibrary}
           preferredLang={preferredLang}
           onClose={() => setSelectedManga(null)}
+          onFindSimilar={handleFindSimilar}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
-const { searchManga, getMangaById, getChapterCount, searchSimilar, getGenres, searchByGenre, fetchCoverImage } = require('./mangadex');
+const { searchManga, getMangaById, getChapterCount, searchSimilar, getGenres, searchByGenre, fetchCoverImage, enrichWithChapterCounts } = require('./mangadex');
 const {
   saveFavorite, getFavorites, deleteFavorite,
   saveSearchHistory, getSearchHistory,
@@ -19,8 +19,10 @@ app.get('/api/search', async (req, res) => {
   const { title } = req.query;
   if (!title) return res.status(400).json({ error: 'title param required' });
   try {
-    const results = await searchManga(title, 5);
-    res.json(results);
+    const libraryIds = new Set(await getLibraryIds());
+    const results = await searchManga(title, 24);
+    const enriched = await enrichWithChapterCounts(results.filter((m) => !libraryIds.has(m.id)));
+    res.json(enriched);
   } catch (err) {
     console.error('Search error:', err.message);
     res.status(500).json({ error: 'Search failed' });
@@ -101,6 +103,20 @@ app.get('/api/cover/:mangaId/:filename', async (req, res) => {
   } catch (err) {
     console.error('Cover proxy error:', err.message);
     res.status(502).end();
+  }
+});
+
+// Full manga details on demand — used when opening the detail modal from
+// Favorites/Library, where only the compact saved fields (title, cover,
+// chapter count, status) are stored, not the full description/tags.
+app.get('/api/manga/:id', async (req, res) => {
+  try {
+    const manga = await getMangaById(req.params.id);
+    const chapterCount = await getChapterCount(req.params.id);
+    res.json({ ...manga, chapterCount });
+  } catch (err) {
+    console.error('Manga detail error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch manga details' });
   }
 });
 

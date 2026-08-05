@@ -17,6 +17,15 @@ async function getMangaById(id) {
   return normalizeManga(json.data);
 }
 
+async function enrichWithChapterCounts(results) {
+  return Promise.all(
+    results.map(async (manga) => {
+      const chapterCount = await getChapterCount(manga.id);
+      return { ...manga, chapterCount };
+    })
+  );
+}
+
 async function getChapterCount(mangaId) {
   try {
     const res = await fetch(`${BASE}/manga/${mangaId}/aggregate?translatedLanguage[]=en&translatedLanguage[]=it`);
@@ -51,14 +60,7 @@ async function searchByGenre(tagId, limit = 30) {
   const res = await fetch(`${BASE}/manga?${qs}`);
   if (!res.ok) throw new Error(`MangaDex genre search failed: ${res.status}`);
   const json = await res.json();
-  const results = json.data.map(normalizeManga);
-  const enriched = await Promise.all(
-    results.map(async (manga) => {
-      const chapterCount = await getChapterCount(manga.id);
-      return { ...manga, chapterCount };
-    })
-  );
-  return enriched;
+  return enrichWithChapterCounts(json.data.map(normalizeManga));
 }
 
 // excludeIds can be a string (single id) or a Set of ids
@@ -81,14 +83,7 @@ async function searchSimilar(queries, excludeIds) {
     }
   }
 
-  const enriched = await Promise.all(
-    results.slice(0, 30).map(async (manga) => {
-      const chapterCount = await getChapterCount(manga.id);
-      return { ...manga, chapterCount };
-    })
-  );
-
-  return enriched;
+  return enrichWithChapterCounts(results.slice(0, 30));
 }
 
 function normalizeManga(data) {
@@ -142,4 +137,4 @@ async function fetchCoverImage(mangaId, filename) {
   return res;
 }
 
-module.exports = { searchManga, getMangaById, getChapterCount, searchSimilar, getGenres, searchByGenre, fetchCoverImage };
+module.exports = { searchManga, getMangaById, getChapterCount, searchSimilar, getGenres, searchByGenre, fetchCoverImage, enrichWithChapterCounts };
