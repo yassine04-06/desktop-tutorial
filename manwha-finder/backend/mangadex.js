@@ -42,8 +42,9 @@ async function getChapterCount(mangaId) {
   }
 }
 
-async function searchSimilar(queries, excludeId) {
-  const seen = new Set([excludeId]);
+// excludeIds can be a string (single id) or a Set of ids
+async function searchSimilar(queries, excludeIds) {
+  const seen = typeof excludeIds === 'string' ? new Set([excludeIds]) : new Set(excludeIds);
   const results = [];
 
   for (const query of queries) {

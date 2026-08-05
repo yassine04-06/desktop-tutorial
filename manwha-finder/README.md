@@ -56,9 +56,25 @@ The "Open in Tachiyomi" button uses the `tachiyomi://manga/mangadex/:id` deep li
 
 - Search manwha by title via MangaDex API
 - Get AI-powered similar recommendations (Claude AI analyzes tags/genres)
-- Filter by status (Completed / Ongoing)
+- Filter by status (Completed / Ongoing) and minimum 50+ chapters
 - Sort by chapter count or update date
 - Save favorites (persisted in local SQLite)
+- **My Library** — mark manwha as already read; the AI automatically excludes
+  everything in your library (and everything recommended before) from future
+  results, so you stop getting the same suggestions
+- Import/export your library as JSON (bookmark icon → Export/Import JSON)
+- Reset recommendation history if you want previously-seen titles to resurface
 - Search history (last 20 searches)
 - Direct Tachiyomi deep links
 - Installable as Android PWA
+
+### How the "no repeats" logic works
+
+Every `/api/similar` call excludes three sets of manga IDs:
+1. The source manwha itself
+2. Everything in **My Library** (bookmark icon in the top bar)
+3. Everything ever returned by a previous `/api/similar` call (tracked server-side)
+
+Use the "Reset recommendation history" button in the Library panel if you want
+set (3) cleared — e.g. after months, when older suggestions are fair game again.
+Set (2) only clears when you manually remove a title from your library.
