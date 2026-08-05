@@ -16,11 +16,11 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 app.get('/api/search', async (req, res) => {
-  const { title } = req.query;
+  const { title, origin } = req.query;
   if (!title) return res.status(400).json({ error: 'title param required' });
   try {
     const libraryIds = new Set(await getLibraryIds());
-    const results = await searchManga(title, 40);
+    const results = await searchManga(title, 40, origin);
     const enriched = await enrichWithChapterCounts(results.filter((m) => !libraryIds.has(m.id)));
     res.json(enriched);
   } catch (err) {
@@ -78,11 +78,11 @@ app.get('/api/genres', async (req, res) => {
 });
 
 app.get('/api/search-by-genre', async (req, res) => {
-  const { tag } = req.query;
+  const { tag, origin } = req.query;
   if (!tag) return res.status(400).json({ error: 'tag param required' });
   try {
     const libraryIds = new Set(await getLibraryIds());
-    const results = await searchByGenre(tag, 30);
+    const results = await searchByGenre(tag, 40, origin);
     res.json(results.filter((m) => !libraryIds.has(m.id)));
   } catch (err) {
     console.error('Search by genre error:', err.message);
