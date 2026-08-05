@@ -1,8 +1,15 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+const { defineConfig } = require('vite');
+const react = require('@vitejs/plugin-react');
+const { VitePWA } = require('vite-plugin-pwa');
 
-export default defineConfig({
+// root: 'frontend' — the Vite app's source (index.html, src/, public/) lives
+// in ./frontend, but this config sits at the package root so Vercel sees a
+// single package.json for the whole project instead of a nested workspace
+// (a second package.json under frontend/ made Vercel's monorepo detection
+// treat this as a "multiple services" project, which needs explicit
+// rewrites/routing we don't actually want for a single Vite + Functions app).
+module.exports = defineConfig({
+  root: 'frontend',
   plugins: [
     react(),
     VitePWA({

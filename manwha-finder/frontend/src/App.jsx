@@ -4,10 +4,21 @@ import FilterBar from './components/FilterBar.jsx';
 import ManwhaCard from './components/ManwhaCard.jsx';
 import FavoritesList from './components/FavoritesList.jsx';
 import LibraryPanel from './components/LibraryPanel.jsx';
+import LanguageToggle from './components/LanguageToggle.jsx';
+import ManwhaDetail from './components/ManwhaDetail.jsx';
 
-function SkeletonCard() {
+const POPULAR_SEARCHES = [
+  'Solo Leveling',
+  'Tower of God',
+  'The Beginning After The End',
+  "Omniscient Reader's Viewpoint",
+  'Lookism',
+  'Villains Are Destined to Die',
+];
+
+function SkeletonCard({ delay = 0 }) {
   return (
-    <div className="bg-card rounded-2xl overflow-hidden">
+    <div className="bg-card rounded-2xl overflow-hidden card-in" style={{ animationDelay: `${delay}ms` }}>
       <div className="skeleton w-full h-56" />
       <div className="p-3 flex flex-col gap-2">
         <div className="skeleton h-4 rounded w-3/4" />
@@ -18,14 +29,31 @@ function SkeletonCard() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ onQuickStart }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-gray-500 gap-4">
-      <svg className="w-24 h-24 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-gray-500 gap-5">
+      <svg className="w-20 h-20 sm:w-24 sm:h-24 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
-      <p className="text-xl font-semibold">Search a manwha to get started</p>
-      <p className="text-sm text-center max-w-xs">Enter a title, pick from the dropdown, and get AI-powered recommendations — already-read manwha are automatically excluded.</p>
+      <div className="text-center">
+        <p className="text-xl font-semibold text-gray-300">Cerca un manwha per iniziare</p>
+        <p className="text-sm text-center max-w-sm mt-1">Scrivi un titolo, scegli dal menu, e ricevi consigli AI simili — quelli già nella tua libreria vengono esclusi automaticamente.</p>
+      </div>
+
+      <div className="flex flex-col items-center gap-2 mt-2">
+        <span className="text-xs uppercase tracking-wide text-gray-600 font-semibold">Prova con uno di questi</span>
+        <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+          {POPULAR_SEARCHES.map((title) => (
+            <button
+              key={title}
+              onClick={() => onQuickStart(title)}
+              className="text-sm bg-card border border-gray-700 hover:border-accent hover:text-accent text-gray-300 px-3 py-1.5 rounded-full transition-colors"
+            >
+              {title}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -41,6 +69,13 @@ export default function App() {
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [libraryIds, setLibraryIds] = useState(new Set());
   const [sourceManwha, setSourceManwha] = useState(null);
+  const [selectedManga, setSelectedManga] = useState(null);
+  const [quickStart, setQuickStart] = useState({ title: '', nonce: 0 });
+  const [preferredLang, setPreferredLang] = useState(() => localStorage.getItem('manwhafinder_lang') || 'it');
+
+  useEffect(() => {
+    localStorage.setItem('manwhafinder_lang', preferredLang);
+  }, [preferredLang]);
 
   useEffect(() => {
     Promise.all([
@@ -57,6 +92,10 @@ export default function App() {
   function handleSimilarResults(data, source) {
     setResults(data);
     setSourceManwha(source);
+  }
+
+  function handleQuickStart(title) {
+    setQuickStart({ title, nonce: Date.now() });
   }
 
   // ── Favorites ──────────────────────────────────────────────────────────────
@@ -140,10 +179,17 @@ export default function App() {
           <h1 className="text-xl font-bold text-accent whitespace-nowrap">ManwhaFinder</h1>
 
           <div className="flex-1 max-w-2xl">
-            <SearchBar onSimilarResults={handleSimilarResults} onLoading={setLoading} />
+            <SearchBar
+              onSimilarResults={handleSimilarResults}
+              onLoading={setLoading}
+              quickStartTitle={quickStart.title}
+              quickStartNonce={quickStart.nonce}
+            />
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
+            <LanguageToggle preferredLang={preferredLang} setPreferredLang={setPreferredLang} />
+
             {/* Library button */}
             <button
               onClick={() => setLibraryOpen(true)}
@@ -207,23 +253,26 @@ export default function App() {
 
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+            {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} delay={i * 30} />)}
           </div>
         )}
 
-        {!loading && results.length === 0 && <EmptyState />}
+        {!loading && results.length === 0 && <EmptyState onQuickStart={handleQuickStart} />}
 
         {!loading && filtered.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filtered.map((manga) => (
-              <ManwhaCard
-                key={manga.id}
-                manga={manga}
-                isFavorite={favoriteIds.has(manga.id)}
-                onToggleFavorite={handleToggleFavorite}
-                isInLibrary={libraryIds.has(manga.id)}
-                onToggleLibrary={handleToggleLibrary}
-              />
+            {filtered.map((manga, i) => (
+              <div key={manga.id} className="card-in" style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>
+                <ManwhaCard
+                  manga={manga}
+                  isFavorite={favoriteIds.has(manga.id)}
+                  onToggleFavorite={handleToggleFavorite}
+                  isInLibrary={libraryIds.has(manga.id)}
+                  onToggleLibrary={handleToggleLibrary}
+                  preferredLang={preferredLang}
+                  onOpenDetail={setSelectedManga}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -248,6 +297,18 @@ export default function App() {
         libraryIds={libraryIds}
         onLibraryChange={handleLibraryChange}
       />
+
+      {selectedManga && (
+        <ManwhaDetail
+          manga={selectedManga}
+          isFavorite={favoriteIds.has(selectedManga.id)}
+          onToggleFavorite={handleToggleFavorite}
+          isInLibrary={libraryIds.has(selectedManga.id)}
+          onToggleLibrary={handleToggleLibrary}
+          preferredLang={preferredLang}
+          onClose={() => setSelectedManga(null)}
+        />
+      )}
     </div>
   );
 }

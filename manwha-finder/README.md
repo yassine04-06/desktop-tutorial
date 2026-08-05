@@ -11,7 +11,7 @@ AI-powered manwha recommendation app — find Korean manga similar to what you l
 ## Setup
 
 ```bash
-# 1. Install all dependencies (root + frontend workspace)
+# 1. Install all dependencies
 npm install
 
 # 2. Copy env template and fill in your API key
@@ -37,6 +37,48 @@ Open **http://localhost:5173** in your browser.
 npm run build
 # Serves the built frontend from /frontend/dist
 ```
+
+## Deploy to Vercel
+
+The app is structured to deploy as a single Vercel project: the frontend
+builds to static files, and the Express backend runs as a Vercel serverless
+function (`api/[...path].js`) — no separate server to host.
+
+1. **Push this repo to GitHub** (if not already) and import it in the
+   [Vercel dashboard](https://vercel.com/new), or deploy from the CLI:
+   ```bash
+   npm i -g vercel
+   cd manwha-finder
+   vercel --prod
+   ```
+   Build settings are already defined in `vercel.json` — Vercel picks them up
+   automatically (install: `npm install`, build: `npm run build`, output:
+   `frontend/dist`). Set **Root Directory to `manwha-finder`** when importing
+   (this repo has other content at its root) and, if deploying from a
+   non-default branch, set it as the Production Branch under
+   Settings → Git after the project is created.
+
+2. **Create a free Turso database** (SQLite-compatible, persists across
+   requests — a local file won't work on serverless):
+   ```bash
+   curl -sSfL https://get.tur.so/install.sh | bash
+   turso auth login
+   turso db create manwha-finder
+   turso db show manwha-finder --url
+   turso db tokens create manwha-finder
+   ```
+
+3. **Set environment variables** in the Vercel project settings
+   (Settings → Environment Variables):
+   - `ANTHROPIC_API_KEY`
+   - `TURSO_DATABASE_URL` (from step 2)
+   - `TURSO_AUTH_TOKEN` (from step 2)
+
+   Without the Turso variables, the app still runs but favorites/library/
+   history won't persist between requests (each serverless invocation gets
+   an ephemeral filesystem).
+
+4. Redeploy after setting env vars so the function picks them up.
 
 ## Android PWA Install
 

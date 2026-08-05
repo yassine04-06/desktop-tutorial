@@ -46,3 +46,21 @@
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+.detail-in {
+  animation: detailIn 0.2s ease-out;
+}
+
+@keyframes detailIn {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.card-in {
+  animation: cardIn 0.35s ease-out both;
+}
+
+@keyframes cardIn {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
