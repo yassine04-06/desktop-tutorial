@@ -95,7 +95,10 @@ app.get('/api/search-by-genre', async (req, res) => {
 app.get('/api/cover/:mangaId/:filename', async (req, res) => {
   try {
     const upstream = await fetchCoverImage(req.params.mangaId, req.params.filename);
-    if (!upstream.ok) return res.status(upstream.status).end();
+    if (!upstream.ok) {
+      console.error(`Cover proxy upstream ${upstream.status} for ${req.params.mangaId}/${req.params.filename}`);
+      return res.status(upstream.status).end();
+    }
     res.setHeader('Content-Type', upstream.headers.get('content-type') || 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
     const buffer = Buffer.from(await upstream.arrayBuffer());

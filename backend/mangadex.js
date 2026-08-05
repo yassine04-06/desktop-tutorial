@@ -128,10 +128,13 @@ function normalizeManga(data) {
 // Fetches a cover image server-side with a Referer MangaDex's CDN accepts,
 // so the real artwork comes back instead of their anti-hotlink placeholder.
 async function fetchCoverImage(mangaId, filename) {
+  // No Referer at all, and a genuine browser User-Agent — a spoofed
+  // Referer claiming to be mangadex.org itself reads as more suspicious
+  // to their anti-hotlink check than simply not sending one (which is
+  // what a plain curl/server-to-server request looks like).
   const res = await fetch(`https://uploads.mangadex.org/covers/${mangaId}/${filename}.256.jpg`, {
     headers: {
-      Referer: 'https://mangadex.org/',
-      'User-Agent': 'Mozilla/5.0 (compatible; ManwhaFinder/1.0; +https://mangadex.org)',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     },
   });
   return res;
